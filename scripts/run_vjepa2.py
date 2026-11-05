@@ -16,6 +16,7 @@ import time
 from pathlib import Path
 
 import numpy as np
+import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from armwm.labels import load_index  # noqa: E402
@@ -36,6 +37,7 @@ def main() -> None:
     p.add_argument("--hop", type=int, default=2)
     p.add_argument("--frame-stride", type=int, default=2)
     p.add_argument("--max-test", type=int, default=0, help="cap test clips (keeps all defects first); 0 = all")
+    p.add_argument("--balanced", type=int, default=0, help="instead: N random test defects + N random test nominals")
     p.add_argument("--max-calib", type=int, default=500)
     p.add_argument("--ema", type=float, default=0.5)
     p.add_argument("--out", default="results/vjepa2.json")
@@ -47,7 +49,10 @@ def main() -> None:
     idx = idx[idx.pick_id.isin(have)].reset_index(drop=True)
     test = idx[idx.split == "test"]
     test = test.sort_values("label", key=lambda s: s == "nominal")  # defects first
-    if a.max_test:
+    if a.balanced:
+        d, n = test[test.label != "nominal"], test[test.label == "nominal"]
+        test = pd.concat([d.sample(min(a.balanced, len(d)), random_state=0), n.sample(min(a.balanced, len(n)), random_state=0)])
+    elif a.max_test:
         test = test.head(a.max_test)
     calib = idx[(idx.split == "train") & (idx.label == "nominal")].head(a.max_calib)
 
