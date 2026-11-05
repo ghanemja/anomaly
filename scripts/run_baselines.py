@@ -44,29 +44,22 @@ def main() -> None:
 
     std = Standardizer().fit(by["extra"])
     smooth = lambda s: causal_ema(s, a.ema)  # noqa: E731
-    results, scorers = {}, {}
+    results, scorers, scored = {}, {}, {}
 
     vel = FeatureVelocity().fit(by["extra"], std)
     knn = KNNDistance(k=5).fit(by["extra"], std)
     scorers["velocity"] = vel.score
     scorers["knn"] = knn.score
     lp = LatentPredictor(context=4, members=5, seed=a.seed).fit(by["extra"], std)
-    cache: dict = {}
-
-    def lp_score(kind):
-        def f(x):
-            key = id(x)
-            if key not in cache:
-                cache[key] = lp.score_all(x)
-            return cache[key][kind]
-        return f
-
-    for kind in ("error", "uncertainty", "surprise"):
-        scorers[f"latent_pred_{kind}"] = lp_score(kind)
-
     for name, fn in scorers.items():
-        test = {p: smooth(fn(f)) for p, f in by["test"].items()}
-        calib = {p: smooth(fn(f)) for p, f in train_nom.items()}
+        scored[name] = {p: fn(f) for g in ("test", "train") for p, f in by[g].items()}
+    lp_all = {p: lp.score_all(f) for g in ("test", "train") for p, f in by[g].items()}
+    for kind in ("error", "uncertainty", "surprise"):
+        scored[f"latent_pred_{kind}"] = {p: s[kind] for p, s in lp_all.items()}
+
+    for name, sc in scored.items():
+        test = {p: smooth(sc[p]) for p in by["test"]}
+        calib = {p: smooth(sc[p]) for p in train_nom}
         results[name] = evaluate(test, idx, calib, stride=stride)
         print(name, json.dumps(results[name]["clip"]), flush=True)
 
