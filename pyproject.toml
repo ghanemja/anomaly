@@ -1,0 +1,17 @@
+[project]
+name = "armwm"
+version = "0.1.0"
+description = "World-model failure monitors on ARMBench robot-manipulation defect videos"
+requires-python = ">=3.10"
+dependencies = ["numpy", "pandas", "pyarrow", "scikit-learn", "requests", "av"]
+
+[project.optional-dependencies]
+torch = ["torch", "torchvision"]
+vjepa2 = ["torch", "transformers>=4.53"]
+dev = ["pytest"]
+
+[tool.setuptools]
+packages = ["armwm", "armwm.scorers", "armwm.worldmodels"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
