@@ -62,3 +62,22 @@ Detection rate at other false-alarm targets:
 Caveats: a single 40 GiB sample (217 test defects, so wide intervals), 320 px
 transcodes, one seed, no hyperparameter search (deliberately, so there is
 nothing to overfit to test).
+
+## V-JEPA2 smoke run (CPU, 30 test clips)
+
+`scripts/run_vjepa2.py --balanced 15 --max-calib 15 --hop 4` on the 320 px
+transcodes: 15 random test defects, 15 random test nominals, 15 calibration
+clips. About 2.5 min per clip on 4 CPU cores.
+
+| monitor | clip AUROC [95% CI] | AUROC open | AUROC decon. | frame AUROC |
+|---|---|---|---|---|
+| vjepa2_mean (mean patch error) | 0.39 [0.18, 0.60] | 0.38 | 0.40 | 0.50 |
+| vjepa2_max (worst patch error) | 0.55 [0.35, 0.77] | 0.59 | 0.50 | 0.60 |
+
+This is an end-to-end check, not a result: with 30 clips the intervals span
+chance. Two things are worth following up at scale. First, the mean error
+points *below* chance: failures may be no more surprising to the off-the-shelf
+predictor than normal motion, which is CureWM's "dreaming of success" effect.
+Second, the worst-patch score is the only variant above 0.5 on open packaging,
+the class the global baselines miss. Both need the full test split, at full
+resolution, on a GPU.

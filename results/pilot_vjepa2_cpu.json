@@ -1,0 +1,147 @@
+{
+ "meta": {
+  "data": "/tmp/claude-0/-home-user-anomaly/50cdf976-3f37-5e14-8e88-d314d15d3522/scratchpad/data/pilot",
+  "labels": "/tmp/claude-0/-home-user-anomaly/50cdf976-3f37-5e14-8e88-d314d15d3522/scratchpad/data/labels",
+  "model": "facebook/vjepa2-vitl-fpc64-256",
+  "device": "cpu",
+  "dtype": "float32",
+  "context": 8,
+  "target": 4,
+  "hop": 4,
+  "frame_stride": 2,
+  "max_test": 0,
+  "balanced": 15,
+  "max_calib": 15,
+  "ema": 0.5,
+  "out": "results/pilot_vjepa2_cpu.json",
+  "n_test": 30,
+  "n_test_defect": 15,
+  "n_calib": 15
+ },
+ "results": {
+  "vjepa2_mean": {
+   "clip": {
+    "n_clips": 30,
+    "n_defect": 15,
+    "auroc": 0.38666666666666666,
+    "ap": 0.5016191140666426,
+    "auroc_open": 0.375,
+    "auroc_deconstruction": 0.39999999999999997,
+    "auroc_ci95": [
+     0.178532980177717,
+     0.5972222222222221
+    ]
+   },
+   "frame": {
+    "n_frames": 4779,
+    "frame_auroc": 0.49544464824520235
+   },
+   "online": [
+    {
+     "target_fa": 0.01,
+     "threshold": 0.5990190444840118,
+     "fa_test": 0.0,
+     "detect_rate": 0.0,
+     "early_rate": 0.0,
+     "detect_after_onset_rate": 0.0,
+     "within_0_5s": 0.0,
+     "within_1s": 0.0,
+     "median_latency_s": NaN,
+     "clip_precision": NaN,
+     "lead_subset_n": 6,
+     "lead_subset_early_rate": 0.0
+    },
+    {
+     "target_fa": 0.05,
+     "threshold": 0.5960350550478324,
+     "fa_test": 0.0,
+     "detect_rate": 0.0,
+     "early_rate": 0.0,
+     "detect_after_onset_rate": 0.0,
+     "within_0_5s": 0.0,
+     "within_1s": 0.0,
+     "median_latency_s": NaN,
+     "clip_precision": NaN,
+     "lead_subset_n": 6,
+     "lead_subset_early_rate": 0.0
+    },
+    {
+     "target_fa": 0.1,
+     "threshold": 0.5939033867325634,
+     "fa_test": 0.0,
+     "detect_rate": 0.0,
+     "early_rate": 0.0,
+     "detect_after_onset_rate": 0.0,
+     "within_0_5s": 0.0,
+     "within_1s": 0.0,
+     "median_latency_s": NaN,
+     "clip_precision": NaN,
+     "lead_subset_n": 6,
+     "lead_subset_early_rate": 0.0
+    }
+   ]
+  },
+  "vjepa2_max": {
+   "clip": {
+    "n_clips": 30,
+    "n_defect": 15,
+    "auroc": 0.5511111111111111,
+    "ap": 0.5742676165291173,
+    "auroc_open": 0.5916666666666666,
+    "auroc_deconstruction": 0.5047619047619047,
+    "auroc_ci95": [
+     0.3539257182446037,
+     0.7685363247863247
+    ]
+   },
+   "frame": {
+    "n_frames": 4779,
+    "frame_auroc": 0.6006741356466853
+   },
+   "online": [
+    {
+     "target_fa": 0.01,
+     "threshold": 0.7739044567579055,
+     "fa_test": 0.06666666666666667,
+     "detect_rate": 0.0,
+     "early_rate": 0.0,
+     "detect_after_onset_rate": 0.0,
+     "within_0_5s": 0.0,
+     "within_1s": 0.0,
+     "median_latency_s": NaN,
+     "clip_precision": 0.0,
+     "lead_subset_n": 6,
+     "lead_subset_early_rate": 0.0
+    },
+    {
+     "target_fa": 0.05,
+     "threshold": 0.7682846282383672,
+     "fa_test": 0.06666666666666667,
+     "detect_rate": 0.06666666666666667,
+     "early_rate": 0.0,
+     "detect_after_onset_rate": 0.06666666666666667,
+     "within_0_5s": 0.0,
+     "within_1s": 0.0,
+     "median_latency_s": 4.133333333333334,
+     "clip_precision": 0.5,
+     "lead_subset_n": 6,
+     "lead_subset_early_rate": 0.0
+    },
+    {
+     "target_fa": 0.1,
+     "threshold": 0.763279014167414,
+     "fa_test": 0.2,
+     "detect_rate": 0.26666666666666666,
+     "early_rate": 0.0,
+     "detect_after_onset_rate": 0.26666666666666666,
+     "within_0_5s": 0.0,
+     "within_1s": 0.0,
+     "median_latency_s": 3.333333333333333,
+     "clip_precision": 0.5714285714285714,
+     "lead_subset_n": 6,
+     "lead_subset_early_rate": 0.0
+    }
+   ]
+  }
+ }
+}
