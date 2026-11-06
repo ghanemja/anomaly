@@ -74,7 +74,7 @@ def main() -> None:
     train_nom = sorted(k for k in S["velocity"] if lab.at[k, "split"] == "train")
     feats = {k: None for k in test_ids + train_nom}
     cal_ids = {m: train_nom for m in MON}
-    mx = lambda s: r(np.nanmax(s)) if np.isfinite(s).any() else None  # noqa: E731
+    mx = lambda s: r(np.nanmax(s), 6) if np.isfinite(s).any() else None  # noqa: E731
 
     calib = {m: sorted(x for x in (mx(fn(k, feats[k])) for k in cal_ids[m]) if x is not None) for m, fn in MON.items()}
     test = [{"id": k, "label": lab.at[k, "label"], "item": lab.at[k, "sublabel"],
@@ -100,6 +100,13 @@ def main() -> None:
     vdir = data / "vjepa2_scores"
     vcal = sorted(x for x in (r(np.nanmax(causal_ema(hold_last(np.load(f)["max"]), 0.5)))
                               for f in vdir.glob("*.npz") if lab.at[f.stem, "split"] == "train"))[:15] if vdir.exists() else []
+    # The V-JEPA2 smoke run is slow on CPU; when its score cache is absent, carry its
+    # (unchanged) numbers over from the previous build instead of dropping them.
+    prev = json.loads((out / "data.json").read_text()) if (out / "data.json").exists() else {}
+    prev_v = {c["id"]: c["series"]["vjepa2"] for c in prev.get("player", []) if "vjepa2" in c.get("series", {})}
+    if not vdir.exists() and prev.get("vjepa2_calib"):
+        vcal = prev["vjepa2_calib"]
+        print("no V-JEPA2 score cache: reusing V-JEPA2 values from the previous docs/data.json", flush=True)
     player = []
     for k in PLAYER:
         fr = read_frames(data / "videos" / f"{k}.mp4", stride=stride)
@@ -109,6 +116,8 @@ def main() -> None:
         if (vdir / f"{k}.npz").exists():
             s = causal_ema(hold_last(np.load(vdir / f"{k}.npz")["max"]), 0.5)[::stride]
             series["vjepa2"] = [r(x) for x in s]
+        elif k in prev_v:
+            series["vjepa2"] = prev_v[k]
         o = int(lab.at[k, "onset"])
         player.append({"id": k, "label": lab.at[k, "label"], "item": lab.at[k, "sublabel"], "n": len(fr),
                        "onset_s": None if o < 0 else min(o, len(fr) * stride - 1) / FPS, "series": series})

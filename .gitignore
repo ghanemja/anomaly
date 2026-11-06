@@ -6,3 +6,4 @@ data/
 *.npz
 *.mp4
 *.ckpt
+!results/pilot_scores.npz

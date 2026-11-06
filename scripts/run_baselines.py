@@ -38,8 +38,12 @@ FOLDS = 5
 
 
 def save_scores(path: Path, scored: dict[str, dict[str, np.ndarray]]) -> None:
-    """Per-frame smoothed scores, one array per (monitor, clip), as float16."""
-    np.savez_compressed(path, **{f"{m}/{p}": s.astype(np.float16) for m, d in scored.items() for p, s in d.items()})
+    """Per-frame smoothed scores, one array per (monitor, clip), as float32.
+
+    float16 cannot resolve probabilities near 1, which ties the supervised
+    scores and shifts their AUROC; float32 reproduces the JSON exactly.
+    """
+    np.savez_compressed(path, **{f"{m}/{p}": s.astype(np.float32) for m, d in scored.items() for p, s in d.items()})
 
 
 def main() -> None:

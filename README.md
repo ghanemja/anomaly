@@ -16,6 +16,7 @@ pilot.
 | `armwm/labels.py` | Labels, splits and per-frame onsets, with the dataset-card quirks fixed |
 | `armwm/stream.py` | Streams chosen videos out of the 254 GB single-gzip archive (parallel ranges, no full download) |
 | `armwm/metrics.py` | Clip, frame and online-latency metrics; thresholds calibrated on held-out nominal clips |
+| `armwm/analysis.py` | Controls: paired AUROC tests, time-matched early-warning null, pre-onset AUROC, motion residuals |
 | `armwm/scorers/baselines.py` | CPU monitors: embedding velocity, kNN, latent-predictor ensemble, supervised causal GRU |
 | `armwm/worldmodels/vjepa2.py` | Causal V-JEPA2 latent-prediction monitor (context encoded separately so the future cannot leak) |
 | `scripts/` | `stream_subset.py` → `extract_features.py` → `run_baselines.py` / `run_vjepa2.py` → `report.py` |
@@ -41,6 +42,10 @@ python scripts/run_baselines.py --data data/pilot --labels data/labels --out res
 ```bash
 python scripts/report.py results/pilot_baselines.json
 ```
+
+`run_baselines.py` also writes per-clip scores to `results/pilot_scores.npz`;
+`scripts/make_site_data.py` builds the site from those, so the page and
+`results/` always agree.
 
 The 40 GiB pilot keeps about 5.9k videos (all official-split clips in that part
 of the archive plus 1 in 5 out-of-split nominal clips), transcoded to 320 px at
