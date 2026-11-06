@@ -65,6 +65,13 @@ def clip_metrics(scores: dict[str, np.ndarray], index: pd.DataFrame, n_boot: int
     for cls in ("open", "deconstruction"):
         m = df["label"].isin(["nominal", cls]).to_numpy()
         out[f"auroc_{cls}"] = _auc(y[m], s[m])
+    if "sublabel" in df:
+        # defects of one item type vs. all nominals (nominal clips carry no item label)
+        nom = (y == 0)
+        for item in ("book", "box"):
+            m = nom | (df["sublabel"] == item).to_numpy()
+            out[f"auroc_item_{item}"] = _auc(y[m], s[m])
+            out[f"n_item_{item}"] = int((y[m] == 1).sum())
     if n_boot:
         rng = np.random.default_rng(seed)
         boots = []
@@ -103,6 +110,9 @@ class OnlineResult:
     clip_precision: float
     lead_subset_n: int  # defects with >= lead_min_s of pre-onset video
     lead_subset_early_rate: float
+    # diagnostic only: threshold set on the test nominals themselves, so every
+    # monitor sits at exactly ``target_fa``. Separates ranking from calibration.
+    oracle_detect_rate: float
 
     def as_dict(self) -> dict:
         return asdict(self)
@@ -149,6 +159,9 @@ def online_metrics(
         w05 += d <= 0.5
         w1 += d <= 1.0
     n = max(len(defect), 1)
+    nom_max = np.array([clip_max(scores[p]) for p in nominal])
+    thr_o = float(np.quantile(nom_max, 1.0 - target_fa)) if len(nominal) else np.nan
+    oracle = float(np.mean([clip_max(scores[p]) > thr_o for p in defect])) if len(defect) else np.nan
     tp = det
     fp = fa * len(nominal) if len(nominal) else 0
     return OnlineResult(
@@ -158,6 +171,7 @@ def online_metrics(
         median_latency_s=float(np.median(lat)) if lat else float("nan"),
         clip_precision=float(tp / (tp + fp)) if tp + fp else float("nan"),
         lead_subset_n=int(lead_n), lead_subset_early_rate=lead_early / lead_n if lead_n else float("nan"),
+        oracle_detect_rate=oracle,
     )
 
 

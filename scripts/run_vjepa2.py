@@ -1,6 +1,6 @@
 """Score clips with the V-JEPA 2 latent world-model monitor, then evaluate.
 
-GPU recommended (bf16, ~1-2 s per clip on an A100 for the default window).
+GPU recommended (bf16; on a 4-core CPU it is about 2.5 min per clip at --hop 4).
 For best fidelity stream full-resolution videos (``stream_subset.py --width 0``);
 the 320 px pilot transcodes work but lose detail.
 
@@ -36,6 +36,7 @@ def main() -> None:
     p.add_argument("--target", type=int, default=4)
     p.add_argument("--hop", type=int, default=2)
     p.add_argument("--frame-stride", type=int, default=2)
+    p.add_argument("--resize", choices=("squash", "pad"), default="squash", help="how to fit 2.3:1 frames to the square input")
     p.add_argument("--max-test", type=int, default=0, help="cap test clips (keeps all defects first); 0 = all")
     p.add_argument("--balanced", type=int, default=0, help="instead: N random test defects + N random test nominals")
     p.add_argument("--max-calib", type=int, default=500)
@@ -57,9 +58,9 @@ def main() -> None:
     calib = idx[(idx.split == "train") & (idx.label == "nominal")].head(a.max_calib)
 
     cfg = VJEPA2Config(model=a.model, device=a.device, dtype=a.dtype, context=a.context,
-                       target=a.target, hop=a.hop, frame_stride=a.frame_stride)
+                       target=a.target, hop=a.hop, frame_stride=a.frame_stride, resize=a.resize)
     mon = VJEPA2Monitor(cfg)
-    cache = data / "vjepa2_scores"
+    cache = data / ("vjepa2_scores" if a.resize == "squash" else f"vjepa2_scores_{a.resize}")
     cache.mkdir(exist_ok=True)
 
     def scores(pid: str) -> dict:

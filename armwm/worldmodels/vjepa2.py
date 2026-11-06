@@ -17,7 +17,8 @@ patch, which suits small local events such as a flap opening. The per-patch
 error map comes back too, for localization figures.
 
 Costs: one ViT-L pass over ``context`` frames plus one over the full window.
-About 10 s per window on a 4-core CPU, a few windows per second on one GPU.
+About 10 s per window on a 4-core CPU (measured: about 2.5 min for a 4.5 s clip
+at ``hop=4``, i.e. 14 windows), a few windows per second on one GPU.
 """
 from __future__ import annotations
 
@@ -39,6 +40,11 @@ class VJEPA2Config:
     hop: int = 2  # model frames between windows (one tubelet)
     device: str = "cpu"
     dtype: str = "float32"  # use "bfloat16" on GPU
+    # The model takes square input; ARMBench clips are 1280x560 (2.3:1).
+    # "squash" stretches to the square (distorts shapes, keeps every pixel row);
+    # "pad" letterboxes (keeps aspect, fewer patches on the scene). The CPU
+    # smoke run used "squash"; compare both before trusting either.
+    resize: str = "squash"
 
 
 class VJEPA2Monitor:
@@ -57,10 +63,22 @@ class VJEPA2Monitor:
         """uint8 (T, H, W, 3) -> float (1, T, 3, S, S), squashed to the model's square input."""
         torch = self.torch
         x = torch.from_numpy(frames).permute(0, 3, 1, 2).float() / 255.0
-        x = torch.nn.functional.interpolate(x, size=(self.size, self.size), mode="bilinear", antialias=True, align_corners=False)
         mean = torch.tensor(IMAGENET_MEAN)[None, :, None, None]
         std = torch.tensor(IMAGENET_STD)[None, :, None, None]
-        x = (x - mean) / std
+        if self.cfg.resize == "squash":
+            x = torch.nn.functional.interpolate(x, size=(self.size, self.size), mode="bilinear", antialias=True, align_corners=False)
+            x = (x - mean) / std
+        elif self.cfg.resize == "pad":
+            h, w = x.shape[-2:]
+            k = self.size / max(h, w)
+            nh, nw = max(1, round(h * k)), max(1, round(w * k))
+            x = torch.nn.functional.interpolate(x, size=(nh, nw), mode="bilinear", antialias=True, align_corners=False)
+            x = (x - mean) / std
+            top, left = (self.size - nh) // 2, (self.size - nw) // 2
+            # pad with zeros after normalisation, i.e. the dataset-mean colour
+            x = torch.nn.functional.pad(x, (left, self.size - nw - left, top, self.size - nh - top))
+        else:
+            raise ValueError(f"resize must be 'squash' or 'pad', not {self.cfg.resize!r}")
         return x[None].to(self.cfg.device, dtype=getattr(torch, self.cfg.dtype))
 
     def window_error(self, window: np.ndarray) -> np.ndarray:

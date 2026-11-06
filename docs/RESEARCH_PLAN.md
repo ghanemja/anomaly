@@ -42,7 +42,13 @@ Measured from the released labels and video (see `armwm/labels.py`):
   here, about 3.5 h for the whole archive) and keeps only selected videos.
 * Amazon's baseline (`baseline/defect_detection_videos.ckpt`) is a PyTorchVideo
   MViT-B (16x4 frames, 224 px, 2-way sigmoid head, 93.4% validation accuracy). It
-  is an offline clip classifier, not an online monitor.
+  is an offline clip classifier, not an online monitor. The ARMBench paper
+  (Table IV) reports it on the same official test split (10,000 nominal clips
+  added to the defect test set, hence the 11.1% defect rate): **recall 0.73 at
+  13% false-positive rate** overall, 0.69 at 0.23 for open, 0.79 at 0.03 for
+  deconstruction. The combined point is directly comparable to our clip-level
+  ROC, with one difference to keep in mind: it sees the whole clip, so it is an
+  upper reference, not a competitor for an online monitor.
 
 ## Protocol
 
@@ -62,6 +68,40 @@ Metrics (`armwm/metrics.py`):
   before onset, share alarmed within 0.5 s / 1 s of onset, median latency,
   clip precision at the test split's 11% defect rate.
 
+## Controls
+
+Every headline claim is paired with the control that could break it
+(`armwm/analysis.py`, reported by `scripts/run_baselines.py`):
+
+| Claim | Control |
+|---|---|
+| "monitor A ties / beats monitor B" | paired bootstrap of the AUROC difference on the same clips, not overlapping per-monitor intervals |
+| "alarms before onset are (not) foresight" | time-matched null: for each defect clip, the share of nominal clips that alarm before that clip's onset frame |
+| "the monitor detects the defect" | pre-onset AUROC: defect clips scored only on frames before onset, against nominal clips cut at the same frame. Above 0.5 means it reacts to something other than the damage (item type, grasp) or has real foresight. Nominal clips have no item label, so this stands in for a per-item breakdown; per-item AUROC (each item type's defects vs. all nominals) is reported too |
+| "the world model is more than motion energy" | `_resid` monitors: per-frame score minus a linear fit on the velocity score (fit on train nominal frames), plus the clip-max correlation with velocity |
+| "online numbers compare ranking quality" | detection at a threshold set on the test nominals themselves (diagnostic only), next to the calibrated number, so calibration error and ranking are separated |
+
+## Fixed settings
+
+These were set by hand when the code was written (commit `e0b983d`), before the
+first test-split run, and have not been changed since. There is no record of
+tuning, but nothing proves it either, so they are frozen here for the GPU run:
+any later change gets its own commit and is reported as a new configuration.
+
+| Setting | Value |
+|---|---|
+| Frame encoder | ImageNet ResNet-18, avg + max pooled layer4 (1024-d) |
+| Frame stride | 3 (10 fps) |
+| Score smoothing | causal EMA, alpha 0.5 |
+| PCA dimension (latent predictor, GRU) | 128 |
+| Latent predictor | context 4, 5 members, hidden 512, 15 epochs, lr 1e-3 |
+| kNN | k 5, bank 60,000 frames |
+| Supervised GRU | hidden 128, 20 epochs, lr 1e-3, 5-fold cross-fit on train |
+| V-JEPA2 | ViT-L fpc64-256, frame stride 2, context 8, target 4, hop 2, squash resize |
+| False-alarm targets | 1 / 5 / 10%; headline at 5% |
+| Early-warning subset | onset at least 1 s into the clip |
+| Seed | 0 |
+
 ## Monitors
 
 | Monitor | Labels? | Runs on CPU? | Code |
@@ -70,7 +110,7 @@ Metrics (`armwm/metrics.py`):
 | kNN distance to nominal frames | no | yes | `scorers/baselines.py` |
 | Latent predictor ensemble (error / uncertainty / surprise) | no | yes | `scorers/baselines.py` |
 | Supervised causal GRU | yes | yes | `scorers/baselines.py` |
-| V-JEPA2 latent prediction error (mean / max patch) | no | slow (6 s per window) | `worldmodels/vjepa2.py` |
+| V-JEPA2 latent prediction error (mean / max patch) | no | slow (about 10 s per window, 2.5 min per clip) | `worldmodels/vjepa2.py` |
 | Cosmos pixel/latent prediction | no | no | to do on GPU |
 | Amazon MViT-B clip classifier | yes | slow | to do: load weights into PyTorchVideo `mvit_base_16x4` |
 
@@ -97,6 +137,8 @@ See `results/PILOT.md` (CPU pilot on the first 40 GiB of the archive).
    --extra-every 20`, about 3.5 h, about 60 GB kept).
 2. Run `scripts/run_vjepa2.py --device cuda --dtype bfloat16` on the full test
    split. Sweep context (4/8/16 frames) and the model size (ViT-L/H/g).
+   Run both `--resize squash` and `--resize pad` (the 2.3:1 frames distort
+   when squashed to the square input).
 3. Fit-on-nominal arm (CureWM question): fine-tune the V-JEPA2 predictor on
    extra nominal clips only, then re-score.
 4. Add a Cosmos predictor monitor behind the same `score_clip` interface, on a

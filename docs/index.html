@@ -438,7 +438,7 @@ footer { display: grid; gap: 8px; font-size: 13.5px; color: var(--muted); paddin
 
   /* ---------- trade-off curve ---------- */
   const rocMons = ["supervised", "latent_unc", "knn", "velocity"];
-  document.getElementById("rocLegend").innerHTML = rocMons.map(m => `<span><i style="background:${V(MON[m].color)}"></i>${MON[m].name}</span>`).join("") + `<span><i style="background:var(--line)"></i>coin flip</span>`;
+  document.getElementById("rocLegend").innerHTML = rocMons.map(m => `<span><i style="background:${V(MON[m].color)}"></i>${MON[m].name}</span>`).join("") + `<span><i style="background:var(--line)"></i>coin flip</span>` + `<span><i style="background:transparent;border:2px solid var(--ink);transform:rotate(45deg);border-radius:0"></i>Amazon MViT-B (offline, sees the whole clip)</span>`;
   const rocBox = document.getElementById("roc");
   const def = D.test.filter(r => r.label !== "nominal");
   const curves = Object.fromEntries(rocMons.map(m => [m, Array.from({ length: 30 }, (_, i) => { const fa = i + 1; return [fa, def.filter(r => caught(r, m, fa)).length / def.length * 100]; })]));
@@ -446,8 +446,8 @@ footer { display: grid; gap: 8px; font-size: 13.5px; color: var(--muted); paddin
     rocBox.innerHTML = "";
     const W = 520, H = 300, m = { l: 42, r: 14, t: 12, b: 34 };
     const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": "Share of failures caught against false alarms allowed" }, rocBox);
-    const x = v => m.l + v / 30 * (W - m.l - m.r), y = v => H - m.b - v / 70 * (H - m.t - m.b);
-    for (let v = 0; v <= 70; v += 10) { el("line", { x1: m.l, x2: W - m.r, y1: y(v), y2: y(v), stroke: V("--grid") }, svg); el("text", { x: m.l - 6, y: y(v) + 4, "text-anchor": "end" }, svg).textContent = v + "%"; }
+    const x = v => m.l + v / 30 * (W - m.l - m.r), y = v => H - m.b - v / 80 * (H - m.t - m.b);
+    for (let v = 0; v <= 80; v += 10) { el("line", { x1: m.l, x2: W - m.r, y1: y(v), y2: y(v), stroke: V("--grid") }, svg); el("text", { x: m.l - 6, y: y(v) + 4, "text-anchor": "end" }, svg).textContent = v + "%"; }
     for (let v = 0; v <= 30; v += 5) el("text", { x: x(v), y: H - m.b + 18, "text-anchor": "middle" }, svg).textContent = v + "%";
     el("text", { x: (m.l + W - m.r) / 2, y: H - 2, "text-anchor": "middle" }, svg).textContent = "false alarms allowed on normal picks";
     el("line", { x1: x(0), y1: y(0), x2: x(30), y2: y(30), stroke: V("--line"), "stroke-width": 2, "stroke-dasharray": "4 4" }, svg);
@@ -459,6 +459,12 @@ footer { display: grid; gap: 8px; font-size: 13.5px; color: var(--muted); paddin
       const cur = curves[k][state.fa - 1];
       el("circle", { cx: x(cur[0]), cy: y(cur[1]), r: 6, fill: V(MON[k].color), stroke: V("--surface"), "stroke-width": 2 }, svg);
     }
+    // Amazon's reference: same official test split, but an offline clip classifier (ARMBench Table IV)
+    if (D.amazon) {
+    const A = D.amazon, ax = x(A.fpr * 100), ay = y(A.recall * 100);
+    el("rect", { x: ax - 6, y: ay - 6, width: 12, height: 12, fill: V("--surface"), stroke: V("--ink"), "stroke-width": 2.5, transform: `rotate(45 ${ax} ${ay})` }, svg);
+    el("text", { x: ax - 12, y: ay + 4, "text-anchor": "end", fill: V("--ink") }, svg).textContent = `Amazon ${Math.round(A.recall * 100)}%`;
+    }
     const tip = tipFor(rocBox);
     const hit = el("rect", { x: m.l, y: m.t, width: W - m.l - m.r, height: H - m.t - m.b, fill: "transparent" }, svg);
     hit.addEventListener("mousemove", e => { const r = svg.getBoundingClientRect(), b = rocBox.getBoundingClientRect(); const fa = Math.max(1, Math.min(30, Math.round(((e.clientX - r.left) / r.width * W - m.l) / (W - m.l - m.r) * 30))); tip.show(`${fa}% false alarms<br>` + rocMons.map(k => `<span style="color:${V(MON[k].color === "--ink" ? "--bg" : MON[k].color)}">●</span> ${MON[k].name}: ${Math.round(curves[k][fa - 1][1])}%`).join("<br>"), e.clientX - b.left, e.clientY - b.top); });
@@ -468,7 +474,7 @@ footer { display: grid; gap: 8px; font-size: 13.5px; color: var(--muted); paddin
   /* ---------- AUROC dots + table ---------- */
   (function () {
     const R = D.results;
-    const rows = [["supervised_gru", "supervised", "Supervised"], ["latent_pred_error", "latent_err", "Small world model (error)"], ["latent_pred_uncertainty", "latent_unc", "Small world model (uncertainty)"], ["knn", "knn", "Nearest normal frame"], ["velocity", "velocity", "Motion energy"], ["latent_pred_surprise", "velocity", "Small world model (ratio)"], ["vjepa2_max", "vjepa2", "V-JEPA2 worst patch (30 clips)"], ["vjepa2_mean", "vjepa2", "V-JEPA2 mean patch (30 clips)"]].filter(r => R[r[0]]);
+    const rows = [["supervised_gru", "supervised", "Supervised"], ["latent_pred_error", "latent_err", "Small world model (error)"], ["latent_pred_error_resid", "latent_err", "Small world model (error), motion removed"], ["latent_pred_uncertainty", "latent_unc", "Small world model (uncertainty)"], ["knn", "knn", "Nearest normal frame"], ["velocity", "velocity", "Motion energy"], ["latent_pred_surprise", "velocity", "Small world model (ratio)"], ["vjepa2_max", "vjepa2", "V-JEPA2 worst patch (30 clips)"], ["vjepa2_mean", "vjepa2", "V-JEPA2 mean patch (30 clips)"]].filter(r => R[r[0]]);
     const box = document.getElementById("auc");
     const W = 570, rowH = 32, m = { l: 244, r: 44, t: 8, b: 42 }, H = m.t + m.b + rowH * rows.length;
     const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": "Clip AUROC by monitor" }, box);
@@ -487,8 +493,8 @@ footer { display: grid; gap: 8px; font-size: 13.5px; color: var(--muted); paddin
       hit.addEventListener("mousemove", e => { const b = box.getBoundingClientRect(); tip.show(`${name}<br>AUROC ${r.auroc.toFixed(3)}${r.ci && r.ci.length ? ` [${r.ci[0].toFixed(2)}–${r.ci[1].toFixed(2)}]` : ""}<br>${r.n} clips`, e.clientX - b.left, e.clientY - b.top); });
       hit.addEventListener("mouseleave", () => tip.hide());
     });
-    document.getElementById("resTable").innerHTML = `<tr><th>Monitor</th><th>Clips</th><th>Clip AUROC</th><th>95% interval</th><th>Box opened</th><th>Came apart</th><th>Caught @ 5% false alarms</th><th>Normal picks alarmed</th></tr>` +
-      rows.map(([k, , name]) => { const r = R[k]; return `<tr><td>${name}</td><td class="n">${r.n}</td><td class="n">${r.auroc.toFixed(3)}</td><td class="n">${r.ci && r.ci.length ? r.ci[0].toFixed(2) + "–" + r.ci[1].toFixed(2) : "–"}</td><td class="n">${r.open.toFixed(2)}</td><td class="n">${r.decon.toFixed(2)}</td><td class="n">${Math.round(r.detect_5 * 100)}%</td><td class="n">${Math.round(r.fa_test_5 * 100)}%</td></tr>`; }).join("");
+    document.getElementById("resTable").innerHTML = `<tr><th>Monitor</th><th>Clips</th><th>Clip AUROC</th><th>95% interval</th><th>Box opened</th><th>Came apart</th><th>Clip AP</th><th>Caught @ 5% false alarms</th><th>Normal picks alarmed</th><th>Caught at exactly 5% (test-set threshold)</th><th>Before damage: AUROC</th></tr>` +
+      rows.map(([k, , name]) => { const r = R[k]; return `<tr><td>${name}</td><td class="n">${r.n}</td><td class="n">${r.auroc.toFixed(3)}</td><td class="n">${r.ci && r.ci.length ? r.ci[0].toFixed(2) + "–" + r.ci[1].toFixed(2) : "–"}</td><td class="n">${r.open.toFixed(2)}</td><td class="n">${r.decon.toFixed(2)}</td><td class="n">${r.ap != null ? r.ap.toFixed(2) : "–"}</td><td class="n">${Math.round(r.detect_5 * 100)}%</td><td class="n">${Math.round(r.fa_test_5 * 100)}%</td><td class="n">${r.oracle_5 != null ? Math.round(r.oracle_5 * 100) + "%" : "–"}</td><td class="n">${r.pre_onset != null ? r.pre_onset.toFixed(2) + (r.pre_onset_ci && r.pre_onset_ci.length ? ` [${r.pre_onset_ci[0].toFixed(2)}–${r.pre_onset_ci[1].toFixed(2)}]` : "") : "–"}</td></tr>`; }).join("");
   })();
 
   /* ---------- onset histogram ---------- */
