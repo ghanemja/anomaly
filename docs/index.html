@@ -183,7 +183,8 @@ table { border-collapse: collapse; width: 100%; font-size: 14px; }
 th, td { text-align: left; padding: 8px 10px; border-bottom: 1.5px solid var(--line); white-space: nowrap; }
 th { font-size: 12px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-2); }
 td.n { text-align: right; font-family: var(--mono); font-variant-numeric: tabular-nums; }
-.tablewrap { overflow-x: auto; }
+.tablewrap { overflow-x: auto; max-width: 100%; }
+.card > *, details { min-width: 0; }
 details summary { cursor: pointer; font-weight: 750; }
 ol.next { margin: 0; padding-left: 1.2em; display: grid; gap: 10px; max-width: 75ch; }
 footer { display: grid; gap: 8px; font-size: 13.5px; color: var(--muted); padding-top: 8px; border-top: var(--bw) solid var(--ink); }
@@ -272,7 +273,7 @@ footer { display: grid; gap: 8px; font-size: 13.5px; color: var(--muted); paddin
     </div>
     <div class="finds">
       <div class="find m"><h3>Labels still help when it counts</h3><p>A small world model that only saw normal picks ranks failures about as well as a small supervised model (AUROC 0.68 vs 0.70, gap not significant). As a live alarm at 5% false alarms, the supervised one catches more: 33% vs 21%.</p></div>
-      <div class="find s"><h3>Amazon's offline model is far ahead</h3><p>Watching the whole clip after the fact, Amazon's classifier catches 73% of failures at 13% false alarms (the ◆). The best live monitor here catches 45% at that rate.</p></div>
+      <div class="find s"><h3>Amazon's offline model is far ahead</h3><p>Watching the whole clip after the fact, Amazon's classifier catches 73% of failures at 13% false alarms (the ◇). The best live monitor here catches 45% at that rate.</p></div>
       <div class="find p"><h3>Torn packaging is the hard case</h3><p>Every monitor is near a coin flip on boxes that open. Items coming apart are easier to spot, for Amazon's model too.</p></div>
       <div class="find b"><h3>Something shows up before the damage</h3><p>Failed picks already score higher than normal ones before any damage is visible (AUROC 0.64), and early alarms fire 2–3× more often than chance. A warning sign, a difference in what was picked, or late labels? Not settled: 81 clips is too few.</p></div>
       <div class="find m"><h3>More than motion</h3><p>Most of the world model's score tracks how much the scene moves, but taking motion out costs almost nothing (AUROC 0.68 → 0.67). What flags failures is something else.</p></div>
@@ -444,7 +445,7 @@ footer { display: grid; gap: 8px; font-size: 13.5px; color: var(--muted); paddin
 
   /* ---------- trade-off curve ---------- */
   const rocMons = ["supervised", "latent_unc", "knn", "velocity"];
-  document.getElementById("rocLegend").innerHTML = rocMons.map(m => `<span><i style="background:${V(MON[m].color)}"></i>${MON[m].name}</span>`).join("") + `<span><i style="background:var(--line)"></i>coin flip</span>` + `<span><i style="background:transparent;border:2px solid var(--ink);transform:rotate(45deg);border-radius:0"></i>Amazon MViT-B (offline, sees the whole clip)</span>`;
+  document.getElementById("rocLegend").innerHTML = rocMons.map(m => `<span><i style="background:${V(MON[m].color)}"></i>${MON[m].name}</span>`).join("") + `<span><i style="background:var(--line)"></i>coin flip</span>` + `<span><b aria-hidden="true" style="font-size:15px;line-height:1">◇</b>Amazon MViT-B (offline, sees the whole clip)</span>`;
   const rocBox = document.getElementById("roc");
   const def = D.test.filter(r => r.label !== "nominal");
   const curves = Object.fromEntries(rocMons.map(m => [m, Array.from({ length: 30 }, (_, i) => { const fa = i + 1; return [fa, def.filter(r => caught(r, m, fa)).length / def.length * 100]; })]));
@@ -480,7 +481,7 @@ footer { display: grid; gap: 8px; font-size: 13.5px; color: var(--muted); paddin
   /* ---------- AUROC dots + table ---------- */
   (function () {
     const R = D.results;
-    const rows = [["supervised_gru", "supervised", "Supervised"], ["latent_pred_error", "latent_err", "Small world model (error)"], ["latent_pred_error_resid", "latent_err", "Small world model (error), motion removed"], ["latent_pred_uncertainty", "latent_unc", "Small world model (uncertainty)"], ["knn", "knn", "Nearest normal frame"], ["velocity", "velocity", "Motion energy"], ["latent_pred_surprise", "velocity", "Small world model (ratio)"], ["vjepa2_max", "vjepa2", "V-JEPA2 worst patch (30 clips)"], ["vjepa2_mean", "vjepa2", "V-JEPA2 mean patch (30 clips)"]].filter(r => R[r[0]]);
+    const rows = [["supervised_gru", "supervised", "Supervised"], ["latent_pred_error", "latent_err", "Small world model (error)"], ["latent_pred_error_resid", "latent_err", "World model, motion removed"], ["latent_pred_uncertainty", "latent_unc", "Small world model (uncertainty)"], ["knn", "knn", "Nearest normal frame"], ["velocity", "velocity", "Motion energy"], ["latent_pred_surprise", "velocity", "Small world model (ratio)"], ["vjepa2_max", "vjepa2", "V-JEPA2 worst patch (30 clips)"], ["vjepa2_mean", "vjepa2", "V-JEPA2 mean patch (30 clips)"]].filter(r => R[r[0]]);
     const box = document.getElementById("auc");
     const W = 570, rowH = 32, m = { l: 244, r: 44, t: 8, b: 42 }, H = m.t + m.b + rowH * rows.length;
     const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": "Clip AUROC by monitor" }, box);
